@@ -84,7 +84,7 @@ const config: HardhatUserConfig = {
     soneium: {
       url: "https://rpc.soneium.org",
       chainId: 1868,
-      accounts: [vars.get("SOLAR_PRIVATE_KEY")],
+      accounts: [vars.get("NEO_TOKYO_PUNKS_PRIVATE_KEY")],
     },
     "soneium-minato": {
       url: "https://rpc.minato.soneium.org/",
