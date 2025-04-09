@@ -43,6 +43,18 @@ const config: HardhatUserConfig = {
       },
     ],
   },
+  networks: {
+    soneium: {
+      url: "https://rpc.soneium.org",
+      chainId: 1868,
+      accounts: [vars.get("NTO_UTOPIA_PRIVATE_KEY")],
+    },
+    "soneium-minato": {
+      url: "https://rpc.minato.soneium.org/",
+      chainId: 1946,
+      accounts: [vars.get("NTO_UTOPIA_PRIVATE_KEY")],
+    },
+  },
 };
 
 export default config;

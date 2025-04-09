@@ -23,18 +23,18 @@ contract NeoTokyoPunksUtopia is ERC721Copyright, IERC4906 {
     IERC20 public immutable astar;
     uint256 public MAX_SUPPLY;
     string private baseURI;
-    uint256[5] public startTimes; // WL 1-1, WL 1-2, WL 2, WL 3, Public
-    uint256[4] public ethPrice;
-    uint256[4] public astarPrice;
-    uint256[3] public stageLimit;
+    uint256[6] public startTimes; // WL 1-1, WL 1-2, WL 2, gap, WL 3, Public
+    uint256[5] public ethPrice;
+    uint256[5] public astarPrice;
+    uint256[4] public stageLimit;
     mapping(uint256 => mapping(address => uint256)) public mintLimit;
 
     constructor(
         address astarAddress,
-        uint256[5] memory startTimes_,
-        uint256[4] memory ethPrice_,
-        uint256[4] memory astarPrice_,
-        uint256[3] memory stageLimit_,
+        uint256[6] memory startTimes_,
+        uint256[5] memory ethPrice_,
+        uint256[5] memory astarPrice_,
+        uint256[4] memory stageLimit_,
         string memory baseUri_
     ) ERC721Copyright("NEO TOKYO PUNKS Utopia", "NTP Utopia", msg.sender) {
         MAX_SUPPLY = 15_000;
@@ -55,7 +55,7 @@ contract NeoTokyoPunksUtopia is ERC721Copyright, IERC4906 {
         }
 
         // stage 0 and 1 share the limit
-        uint256 stageLimitAmount = currentStage == 4
+        uint256 stageLimitAmount = currentStage == 5
             ? MAX_SUPPLY - totalSupply()
             : currentStage == 0
             ? stageLimit[0]
@@ -66,13 +66,13 @@ contract NeoTokyoPunksUtopia is ERC721Copyright, IERC4906 {
         if (currentStage == 1 && mintLimit[0][minter] > 0) {
             /// stage 1 applies WL but not limit
             walletLimit = type(uint256).max;
-        } else if (currentStage == 4) {
+        } else if (currentStage == 5) {
             walletLimit = type(uint256).max;
         } else {
             walletLimit = mintLimit[currentStage][minter];
         }
 
-        uint256 txLimit = (currentStage == 1 || currentStage == 4)
+        uint256 txLimit = (currentStage == 1 || currentStage == 5)
             ? 10
             : type(uint256).max;
 
@@ -134,7 +134,7 @@ contract NeoTokyoPunksUtopia is ERC721Copyright, IERC4906 {
         address[] memory addresses,
         uint256[] memory amount
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(stage < 4, "NEO TOKYO PUNKS Utopia: InvalidWhitelistId");
+        require(stage < 5, "NEO TOKYO PUNKS Utopia: InvalidWhitelistId");
         uint256 i = addresses.length;
         require(
             i == amount.length,
@@ -170,7 +170,7 @@ contract NeoTokyoPunksUtopia is ERC721Copyright, IERC4906 {
         uint256 currentStage = _getCurrentStage();
 
         // stage 0 and 1 share the limit
-        if (currentStage == 4) {
+        if (currentStage == 5) {
             // no need to update the limit
         } else if (currentStage == 0) {
             stageLimit[0] -= amount;
@@ -179,7 +179,7 @@ contract NeoTokyoPunksUtopia is ERC721Copyright, IERC4906 {
         }
 
         // stage 0, 2, 3 apply the wallet limit
-        if (currentStage != 1 && currentStage != 4) {
+        if (currentStage != 1 && currentStage != 5) {
             mintLimit[currentStage][minter] -= amount;
         }
     }

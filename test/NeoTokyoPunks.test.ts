@@ -1,33 +1,35 @@
-import {
-  mine,
-  SnapshotRestorer,
-  takeSnapshot,
-} from "@nomicfoundation/hardhat-network-helpers";
+import { increaseTo } from "@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time";
 import { expect } from "chai";
 import { parseEther, Signer } from "ethers";
 import hre from "hardhat";
 import { MockErc20, NeoTokyoPunksUtopia } from "../typechain-types";
-import { increaseTo } from "@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time";
 
-const ETH_PRICES: [bigint, bigint, bigint, bigint] = [
+const ETH_PRICES: [bigint, bigint, bigint, bigint, bigint] = [
   parseEther("0.009"),
   parseEther("0.011"),
+  parseEther("100"),
   parseEther("0.011"),
   parseEther("0.013"),
 ];
-const ASTAR_PRICES: [bigint, bigint, bigint, bigint] = [
+const ASTAR_PRICES: [bigint, bigint, bigint, bigint, bigint] = [
   parseEther("575"),
   parseEther("700"),
+  parseEther("100000000"),
   parseEther("700"),
   parseEther("830"),
-] as const;
+];
 
 describe("NeoTokyoPunksUtopia", function () {
   let NeoTokyoPunksUtopia: NeoTokyoPunksUtopia;
   let MockErc20: MockErc20;
-  let owner: Signer;
   let addrs: Signer[];
-  let startTime: [number, number, number, number, number];
+  let startTime: [number, number, number, number, number, number];
+  let wl11: number,
+    wl12: number,
+    wl2: number,
+    gap: number,
+    wl3: number,
+    publicSale: number;
 
   beforeEach(async function () {
     const current = Math.floor(new Date().getTime() / 1000);
@@ -37,10 +39,11 @@ describe("NeoTokyoPunksUtopia", function () {
       current + 2700,
       current + 3600,
       current + 4500,
+      current + 5400,
     ];
+    [wl11, wl12, wl2, gap, wl3, publicSale] = startTime;
 
     addrs = await hre.ethers.getSigners();
-    owner = addrs[0];
     const MockErc20Factory = await hre.ethers.getContractFactory("MockErc20");
     MockErc20 = await MockErc20Factory.deploy("Mock Token", "MTK");
     const NeoTokyoPunksUtopiaFactory = await hre.ethers.getContractFactory(
@@ -51,7 +54,7 @@ describe("NeoTokyoPunksUtopia", function () {
       startTime,
       ETH_PRICES,
       ASTAR_PRICES,
-      [4500, 3500, 3000],
+      [4500, 3500, 0, 3000],
       "ipfs://bafybeicgnjzhjf5m25qtwhvrq434mngbwnzdb3v5ki75ttgylpvqtjbe4e?"
     );
     await NeoTokyoPunksUtopia.batchUpdateWhitelist(
@@ -73,7 +76,7 @@ describe("NeoTokyoPunksUtopia", function () {
       [3500, 5, 10]
     );
     await NeoTokyoPunksUtopia.batchUpdateWhitelist(
-      3,
+      4,
       [
         await addrs[7].getAddress(),
         await addrs[8].getAddress(),
@@ -95,7 +98,7 @@ describe("NeoTokyoPunksUtopia", function () {
   });
 
   it("During WL 1-1, it should revert if not whitelisted", async function () {
-    await increaseTo(startTime[0]);
+    await increaseTo(wl11);
     await expect(
       NeoTokyoPunksUtopia.mint(1, { value: ETH_PRICES[0] })
     ).to.be.revertedWith("NEO TOKYO PUNKS Utopia: ExceedsMintable");
@@ -124,7 +127,7 @@ describe("NeoTokyoPunksUtopia", function () {
   });
 
   it("During WL 1-2, it should revert if not whitelisted", async function () {
-    await increaseTo(startTime[1]);
+    await increaseTo(wl12);
     await expect(
       NeoTokyoPunksUtopia.mint(1, { value: ETH_PRICES[0] })
     ).to.be.revertedWith("NEO TOKYO PUNKS Utopia: ExceedsMintable");
@@ -149,7 +152,7 @@ describe("NeoTokyoPunksUtopia", function () {
   });
 
   it("During WL 2, it should revert if not whitelisted", async function () {
-    await increaseTo(startTime[2]);
+    await increaseTo(wl2);
     await expect(
       NeoTokyoPunksUtopia.mint(1, { value: ETH_PRICES[1] })
     ).to.be.revertedWith("NEO TOKYO PUNKS Utopia: ExceedsMintable");
@@ -177,16 +180,23 @@ describe("NeoTokyoPunksUtopia", function () {
     ).to.be.revertedWith("NEO TOKYO PUNKS Utopia: ExceedsMintable");
   });
 
-  it("During WL 3, it should revert if not whitelisted", async function () {
-    await increaseTo(startTime[3]);
+  it("During gap, it should revert", async function () {
+    await increaseTo(gap);
     await expect(
       NeoTokyoPunksUtopia.mint(1, { value: ETH_PRICES[2] })
+    ).to.be.revertedWith("NEO TOKYO PUNKS Utopia: ExceedsMintable");
+  });
+
+  it("During WL 3, it should revert if not whitelisted", async function () {
+    await increaseTo(wl3);
+    await expect(
+      NeoTokyoPunksUtopia.mint(1, { value: ETH_PRICES[3] })
     ).to.be.revertedWith("NEO TOKYO PUNKS Utopia: ExceedsMintable");
   });
   it("During WL 3, it should allow any amount of minting if not exceed its limit", async function () {
     for (let i = 0; i < 30; i++) {
       await NeoTokyoPunksUtopia.connect(addrs[7]).mint(100, {
-        value: ETH_PRICES[2] * 100n,
+        value: ETH_PRICES[3] * 100n,
       });
     }
     expect(
@@ -196,37 +206,45 @@ describe("NeoTokyoPunksUtopia", function () {
   it("During WL 3, it should not allow minting if exceed stage limit", async function () {
     for (let i = 0; i < 30; i++) {
       await NeoTokyoPunksUtopia.connect(addrs[7]).mint(100, {
-        value: ETH_PRICES[2] * 100n,
+        value: ETH_PRICES[3] * 100n,
       });
     }
     await expect(
       NeoTokyoPunksUtopia.connect(addrs[8]).mint(2, {
-        value: ETH_PRICES[2] * 2n,
+        value: ETH_PRICES[3] * 2n,
       })
     ).to.be.revertedWith("NEO TOKYO PUNKS Utopia: ExceedsMintable");
   });
 
   it("During public sale, it should allow up to 10 mints in single transaction and no limit for a wallet", async function () {
-    await increaseTo(startTime[4]);
+    await increaseTo(publicSale);
     await NeoTokyoPunksUtopia.mint(6, {
-      value: ETH_PRICES[3] * 6n,
+      value: ETH_PRICES[4] * 6n,
     });
     await expect(
       NeoTokyoPunksUtopia.mint(11, {
-        value: ETH_PRICES[3] * 11n,
+        value: ETH_PRICES[4] * 11n,
       })
     ).to.be.revertedWith("NEO TOKYO PUNKS Utopia: ExceedsMintable");
   });
 
   it("Can pay with Astar", async function () {
-    await MockErc20.mint(await addrs[1].getAddress(), ASTAR_PRICES[3]);
+    await MockErc20.mint(await addrs[1].getAddress(), ASTAR_PRICES[4]);
     await MockErc20.connect(addrs[1]).approve(
       await NeoTokyoPunksUtopia.getAddress(),
-      ASTAR_PRICES[3]
+      ASTAR_PRICES[4]
     );
     await NeoTokyoPunksUtopia.connect(addrs[1]).mint(1);
     await expect(NeoTokyoPunksUtopia.mint(1)).to.be.revertedWith(
       "NEO TOKYO PUNKS Utopia: InsufficientAstarBalance"
     );
+  });
+
+  it("Admin can mint", async function () {
+    await NeoTokyoPunksUtopia.grantRole(
+      await NeoTokyoPunksUtopia.MINTER_ROLE(),
+      await addrs[0].getAddress()
+    );
+    await NeoTokyoPunksUtopia.adminMint(await addrs[0].getAddress(), 1);
   });
 });
