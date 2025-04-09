@@ -3,24 +3,25 @@
 pragma solidity ^0.8.0;
 pragma abicoder v2;
 
-import './IERC721Copyright.sol';
-import '@openzeppelin/contracts/access/Ownable.sol';
-import '@openzeppelin/contracts/token/ERC721/ERC721.sol';
-import '@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol';
-import '@openzeppelin/contracts/utils/cryptography/ECDSA.sol';
+import "./IERC721Copyright.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
-abstract contract ERC721Copyright is IERC721Copyright, ERC721Enumerable, Ownable {
+abstract contract ERC721Copyright is
+    IERC721Copyright,
+    ERC721Enumerable,
+    AccessControl
+{
     mapping(uint256 => SignatureInfo) private _signatures;
     LicenseInfo private licenseInfo;
 
-    constructor(string memory name_, string memory symbol_, address initialOwner) 
-        ERC721(name_, symbol_)
-        Ownable(initialOwner)
-    {}
-
-    function mint(address to) external virtual;
-
-    function batchMint(address to, uint256 amount) external virtual;
+    constructor(
+        string memory name_,
+        string memory symbol_,
+        address initialOwner
+    ) ERC721(name_, symbol_) {}
 
     function _update(
         address from,
@@ -29,9 +30,9 @@ abstract contract ERC721Copyright is IERC721Copyright, ERC721Enumerable, Ownable
     ) internal virtual {
         if (from != to) {
             if (from == address(0)) {
-                _updateSignature(tokenId, true, to, '');
+                _updateSignature(tokenId, true, to, "");
             } else {
-                _updateSignature(tokenId, false, address(0), '');
+                _updateSignature(tokenId, false, address(0), "");
             }
         }
     }
@@ -54,7 +55,7 @@ abstract contract ERC721Copyright is IERC721Copyright, ERC721Enumerable, Ownable
         } else {
             emit LicenseRevoked(signer, tokenId, licenseVersion);
         }
-        
+
         // Hook for additional processing after signature update
         _afterSignatureUpdate(tokenId, signed, signer, signature);
     }
@@ -76,10 +77,15 @@ abstract contract ERC721Copyright is IERC721Copyright, ERC721Enumerable, Ownable
         // Default empty implementation
     }
 
-    function _isSignatureValid(bytes memory signature, address signer) private view returns (bool) {
+    function _isSignatureValid(
+        bytes memory signature,
+        address signer
+    ) private view returns (bool) {
         bytes32 hash = licenseInfo.contentHash;
         // verify hash signed via `personal_sign`
-        bytes32 ethSignedMessageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", hash));
+        bytes32 ethSignedMessageHash = keccak256(
+            abi.encodePacked("\x19Ethereum Signed Message:\n32", hash)
+        );
         return ECDSA.recover(ethSignedMessageHash, signature) == signer;
     }
 
@@ -90,7 +96,7 @@ abstract contract ERC721Copyright is IERC721Copyright, ERC721Enumerable, Ownable
     function setCopyrightLicense(
         string calldata licenseURI,
         bytes32 contentHash
-    ) public onlyOwner returns (uint256 version) {
+    ) public onlyRole(DEFAULT_ADMIN_ROLE) returns (uint256 version) {
         uint256 licenseVersion = licenseInfo.version + 1;
         uint256 timestamp = block.timestamp;
         licenseInfo = LicenseInfo({
@@ -99,18 +105,26 @@ abstract contract ERC721Copyright is IERC721Copyright, ERC721Enumerable, Ownable
             version: licenseVersion,
             timestamp: timestamp
         });
-        emit CopyrightLicenseUpdated(licenseURI, contentHash, licenseVersion, timestamp);
+        emit CopyrightLicenseUpdated(
+            licenseURI,
+            contentHash,
+            licenseVersion,
+            timestamp
+        );
         return licenseVersion;
     }
 
-    function acceptLicenseForTokens(uint256[] memory tokenIds, bytes memory signature) public {
+    function acceptLicenseForTokens(
+        uint256[] memory tokenIds,
+        bytes memory signature
+    ) public {
         address signer = msg.sender;
         bool signed = _isSignatureValid(signature, signer);
-        require(signed, 'ERC721Copyright: signature error');
+        require(signed, "ERC721Copyright: signature error");
         for (uint256 i = 0; i < tokenIds.length; i++) {
             uint256 tokenId = tokenIds[i];
             address owner = _requireOwned(tokenId);
-            require(owner == signer, 'ERC721Copyright: caller is not owner');
+            require(owner == signer, "ERC721Copyright: caller is not owner");
             _updateSignature(tokenId, signed, signer, signature);
         }
     }
@@ -118,7 +132,9 @@ abstract contract ERC721Copyright is IERC721Copyright, ERC721Enumerable, Ownable
     function getLicenseSignatures(
         uint256[] memory tokenIds
     ) public view returns (SignatureInfo[] memory) {
-        SignatureInfo[] memory signatureInfos = new SignatureInfo[](tokenIds.length);
+        SignatureInfo[] memory signatureInfos = new SignatureInfo[](
+            tokenIds.length
+        );
         for (uint256 i = 0; i < tokenIds.length; i++) {
             uint256 tokenId = tokenIds[i];
             _requireOwned(tokenId);
@@ -129,7 +145,13 @@ abstract contract ERC721Copyright is IERC721Copyright, ERC721Enumerable, Ownable
 
     function supportsInterface(
         bytes4 interfaceId
-    ) public view virtual override(IERC165, ERC721Enumerable) returns (bool) {
+    )
+        public
+        view
+        virtual
+        override(IERC165, ERC721Enumerable, AccessControl)
+        returns (bool)
+    {
         return
             interfaceId == type(IERC721Copyright).interfaceId ||
             super.supportsInterface(interfaceId);
