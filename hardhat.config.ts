@@ -44,6 +44,9 @@ const config: HardhatUserConfig = {
     ],
   },
   networks: {
+    hardhat: {
+      initialDate: "2025-04-09T00:00:00Z",
+    },
     soneium: {
       url: "https://rpc.soneium.org",
       chainId: 1868,

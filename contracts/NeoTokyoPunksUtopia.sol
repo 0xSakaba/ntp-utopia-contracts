@@ -23,17 +23,17 @@ contract NeoTokyoPunksUtopia is ERC721Copyright, IERC4906 {
     IERC20 public immutable astar;
     uint256 public MAX_SUPPLY;
     string private baseURI;
-    uint256[6] public startTimes; // WL 1-1, WL 1-2, WL 2, gap, WL 3, Public
-    uint256[5] public ethPrice;
-    uint256[5] public astarPrice;
-    uint256[4] public stageLimit;
-    mapping(uint256 => mapping(address => uint256)) public mintLimit;
+    uint256[8] public startTimes; // WL0, Gap1, WL1-1, WL1-2, WL2, Gap2, WL3, Public
+    uint256[4] public ethPrice; // WL1, WL2, WL3, PUBLIC
+    uint256[4] public astarPrice;
+    uint256[4] public stageLimit; // WL0, WL1, WL2, WL3
+    mapping(uint256 => mapping(address => uint256)) public mintLimit; // WL0, WL1, WL2, WL3 => address => amount
 
     constructor(
         address astarAddress,
-        uint256[6] memory startTimes_,
-        uint256[5] memory ethPrice_,
-        uint256[5] memory astarPrice_,
+        uint256[8] memory startTimes_,
+        uint256[4] memory ethPrice_,
+        uint256[4] memory astarPrice_,
         uint256[4] memory stageLimit_,
         string memory baseUri_
     ) ERC721Copyright("NEO TOKYO PUNKS Utopia", "NTP Utopia", msg.sender) {
@@ -54,25 +54,24 @@ contract NeoTokyoPunksUtopia is ERC721Copyright, IERC4906 {
             return 0;
         }
 
-        // stage 0 and 1 share the limit
-        uint256 stageLimitAmount = currentStage == 5
-            ? MAX_SUPPLY - totalSupply()
-            : currentStage == 0
-            ? stageLimit[0]
-            : stageLimit[currentStage - 1];
+        uint256 whitelistId = _getWhitelistId(currentStage);
+        uint256 stageLimitAmount = whitelistId == type(uint256).max
+            ? 0
+            : whitelistId == 4
+            ? type(uint256).max
+            : stageLimit[whitelistId];
 
-        // stage 0, 2, 3 apply the wallet limit
         uint256 walletLimit;
-        if (currentStage == 1 && mintLimit[0][minter] > 0) {
+        if (currentStage == 3 && mintLimit[1][minter] > 0) {
             /// stage 1 applies WL but not limit
             walletLimit = type(uint256).max;
-        } else if (currentStage == 5) {
+        } else if (currentStage == 7) {
             walletLimit = type(uint256).max;
         } else {
-            walletLimit = mintLimit[currentStage][minter];
+            walletLimit = mintLimit[whitelistId][minter];
         }
 
-        uint256 txLimit = (currentStage == 1 || currentStage == 5)
+        uint256 txLimit = (currentStage == 3 || currentStage == 7)
             ? 10
             : type(uint256).max;
 
@@ -168,31 +167,16 @@ contract NeoTokyoPunksUtopia is ERC721Copyright, IERC4906 {
 
     function _updateMintable(address minter, uint256 amount) internal {
         uint256 currentStage = _getCurrentStage();
+        uint256 whitelistId = _getWhitelistId(currentStage);
 
-        // stage 0 and 1 share the limit
-        if (currentStage == 5) {
-            // no need to update the limit
-        } else if (currentStage == 0) {
-            stageLimit[0] -= amount;
-        } else {
-            stageLimit[currentStage - 1] -= amount;
+        if (whitelistId < 4) {
+            stageLimit[whitelistId] -= amount;
         }
 
         // stage 0, 2, 3 apply the wallet limit
-        if (currentStage != 1 && currentStage != 5) {
-            mintLimit[currentStage][minter] -= amount;
+        if (currentStage != 3 && currentStage != 7) {
+            mintLimit[whitelistId][minter] -= amount;
         }
-    }
-
-    function _getPrice() internal view returns (uint256, uint256) {
-        uint256 currentStage = _getCurrentStage();
-        // offset to get correct price
-        if (currentStage > 0) {
-            unchecked {
-                --currentStage;
-            }
-        }
-        return (ethPrice[currentStage], astarPrice[currentStage]);
     }
 
     function _baseURI() internal view virtual override returns (string memory) {
@@ -230,5 +214,41 @@ contract NeoTokyoPunksUtopia is ERC721Copyright, IERC4906 {
             }
         } while (i > 0);
         return type(uint256).max;
+    }
+
+    function _getWhitelistId(uint256 stage) internal pure returns (uint256) {
+        if (stage == 0) {
+            return 0;
+        }
+        if (stage == 2 || stage == 3) {
+            return 1;
+        }
+        if (stage == 4) {
+            return 2;
+        }
+        if (stage == 6) {
+            return 3;
+        }
+        if (stage == 7) {
+            return 4;
+        }
+        // no whitelist apply
+        return type(uint256).max;
+    }
+
+    function _getPrice()
+        internal
+        view
+        returns (uint256 ethPrice_, uint256 astarPrice_)
+    {
+        uint256 currentStage = _getCurrentStage();
+        uint256 whitelistId = _getWhitelistId(currentStage);
+        if (whitelistId == 0) {
+            return (0, 0);
+        }
+        if (whitelistId == type(uint256).max) {
+            return (type(uint256).max, type(uint256).max);
+        }
+        return (ethPrice[whitelistId - 1], astarPrice[whitelistId - 1]);
     }
 }
