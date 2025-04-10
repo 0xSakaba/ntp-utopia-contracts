@@ -1,4 +1,4 @@
-import { increaseTo } from "@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time";
+import * as helper from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import {
   concat,
@@ -10,6 +10,8 @@ import {
 } from "ethers";
 import hre from "hardhat";
 import { MockErc20, NeoTokyoPunksUtopia } from "../typechain-types";
+
+const { increaseTo } = helper.time;
 
 const ETH_PRICES: [bigint, bigint, bigint, bigint] = [
   parseEther("0.009"),
