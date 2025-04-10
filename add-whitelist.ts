@@ -47,7 +47,7 @@ async function main() {
     "NeoTokyoPunksUtopia"
   );
   const NeoTokyoPunksUtopia = NeoTokyoPunksUtopiaFactory.attach(
-    "0x6A48451cC19BD2b404b439e6e975C097Dd472616"
+    "0xfB107CB2e04238A04acCba3D6410cB8740fCD92d"
   ) as NeoTokyoPunksUtopia;
 
   // WL 0
