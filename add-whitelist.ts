@@ -58,9 +58,8 @@ async function main() {
         "0x0383C0bDD89e915C1E2b4Ac3445a3158211056E9",
         "0x2f5a84bD155ea809fa57C443aD96392C8371Cf37",
         "0x2133e3e30F08A076D51c96B99fDD0E003044E09D",
-        "0x4DF968d241aF1f78B2fbE2Ec88eb668051AbBA50",
       ],
-      [2850, 750, 150, 2850]
+      [2850, 750, 150]
     )
   ).wait();
 

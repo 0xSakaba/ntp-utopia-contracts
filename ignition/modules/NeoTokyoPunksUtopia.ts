@@ -6,7 +6,7 @@ import { parseEther } from "ethers";
 
 const NeoTokyoPunksModule = buildModule("NeoTokyoPunksUtopiaModule", (m) => {
   const startTime = [
-    new Date("2025-04-11T08:00:00Z").getTime() / 1000, // wl0
+    new Date("2025-04-10T08:00:00Z").getTime() / 1000, // wl0
     new Date("2025-04-11T10:00:00Z").getTime() / 1000, // gap
     new Date("2025-04-11T11:00:00Z").getTime() / 1000, // wl1-1
     new Date("2025-04-11T13:00:00Z").getTime() / 1000, // wl1-2
@@ -27,8 +27,8 @@ const NeoTokyoPunksModule = buildModule("NeoTokyoPunksUtopiaModule", (m) => {
     new Date("2025-04-10T10:00:00Z").getTime() / 1000, // public
   ];
   const NeoTokyoPunks = m.contract("NeoTokyoPunksUtopia", [
-    "0xEecD02C2E160516aD2bd0e089e7d6d83D558cA25",
-    testStartTime,
+    "0x2CAE934a1e84F693fbb78CA5ED3B0A6893259441",
+    startTime,
     [
       parseEther("0.009"),
       parseEther("0.011"),
@@ -42,7 +42,7 @@ const NeoTokyoPunksModule = buildModule("NeoTokyoPunksUtopiaModule", (m) => {
       parseEther("830"),
     ],
     [3750, 4500, 3500, 3000],
-    "ipfs://bafybeicgnjzhjf5m25qtwhvrq434mngbwnzdb3v5ki75ttgylpvqtjbe4e?",
+    "ipfs://bafkreic2dcemsdxsubbszkpgr4owktza633xyi3rmotenoytrtpun5or6e?",
   ]);
 
   return { NeoTokyoPunks };
