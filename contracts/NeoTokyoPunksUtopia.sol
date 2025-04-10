@@ -13,8 +13,6 @@ import "@openzeppelin/contracts/interfaces/IERC165.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "hardhat/console.sol";
-
 contract NeoTokyoPunksUtopia is ERC721Copyright, IERC4906 {
     using Strings for uint256;
     using SafeERC20 for IERC20;
@@ -179,8 +177,22 @@ contract NeoTokyoPunksUtopia is ERC721Copyright, IERC4906 {
         }
     }
 
-    function _baseURI() internal view virtual override returns (string memory) {
-        return baseURI;
+    function tokenURI(
+        uint256 tokenId
+    ) public view override returns (string memory) {
+        uint256[] memory tokenIds = new uint256[](1);
+        tokenIds[0] = tokenId;
+        SignatureInfo[] memory signatures = getLicenseSignatures(tokenIds);
+
+        return
+            string.concat(
+                baseURI,
+                tokenId.toString(),
+                signatures[0].copyrightAgreementSigned
+                    ? "-signed"
+                    : "-unsigned",
+                ".json"
+            );
     }
 
     function _afterSignatureUpdate(

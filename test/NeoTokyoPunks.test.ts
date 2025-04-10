@@ -1,6 +1,13 @@
 import { increaseTo } from "@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time";
 import { expect } from "chai";
-import { parseEther, Signer } from "ethers";
+import {
+  concat,
+  getBytes,
+  keccak256,
+  parseEther,
+  Signer,
+  toUtf8Bytes,
+} from "ethers";
 import hre from "hardhat";
 import { MockErc20, NeoTokyoPunksUtopia } from "../typechain-types";
 
@@ -248,5 +255,45 @@ describe("NeoTokyoPunksUtopia", function () {
       await notWhitelisted.getAddress()
     );
     await NeoTokyoPunksUtopia.adminMint(await notWhitelisted.getAddress(), 1);
+  });
+
+  it("Should show correct token URI", async function () {
+    const copyrightUri = "https://example.com/copyright";
+    const copyrightHash = keccak256(toUtf8Bytes("Test"));
+    await NeoTokyoPunksUtopia.setCopyrightLicense(copyrightUri, copyrightHash);
+
+    // it should be signed when minted
+    await NeoTokyoPunksUtopia.mint(1, { value: ETH_PRICES[3] });
+    expect(await NeoTokyoPunksUtopia.tokenURI(1)).to.equal(
+      "ipfs://bafybeicgnjzhjf5m25qtwhvrq434mngbwnzdb3v5ki75ttgylpvqtjbe4e?1-signed.json"
+    );
+
+    // after transfer, the token should be unsigned
+    await NeoTokyoPunksUtopia.transferFrom(
+      await notWhitelisted.getAddress(),
+      await whitelisted1.getAddress(),
+      1
+    );
+    expect(await NeoTokyoPunksUtopia.tokenURI(1)).to.equal(
+      "ipfs://bafybeicgnjzhjf5m25qtwhvrq434mngbwnzdb3v5ki75ttgylpvqtjbe4e?1-unsigned.json"
+    );
+
+    // after reveal
+    await NeoTokyoPunksUtopia.setBaseURI(
+      "ipfs://bafybeicgnjzhjf5m25qtwhvrq434mngbwnzdb3v5ki75ttgylpvqtjbe4e/"
+    );
+    expect(await NeoTokyoPunksUtopia.tokenURI(1)).to.equal(
+      "ipfs://bafybeicgnjzhjf5m25qtwhvrq434mngbwnzdb3v5ki75ttgylpvqtjbe4e/1-unsigned.json"
+    );
+
+    // after sign
+    const signature = await whitelisted1.signMessage(getBytes(copyrightHash));
+    await NeoTokyoPunksUtopia.connect(whitelisted1).acceptLicenseForTokens(
+      [1],
+      signature
+    );
+    expect(await NeoTokyoPunksUtopia.tokenURI(1)).to.equal(
+      "ipfs://bafybeicgnjzhjf5m25qtwhvrq434mngbwnzdb3v5ki75ttgylpvqtjbe4e/1-signed.json"
+    );
   });
 });

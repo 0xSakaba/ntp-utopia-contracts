@@ -24,10 +24,12 @@ abstract contract ERC721Copyright is
     ) ERC721(name_, symbol_) {}
 
     function _update(
-        address from,
         address to,
-        uint256 tokenId
-    ) internal virtual {
+        uint256 tokenId,
+        address auth
+    ) internal virtual override returns (address from) {
+        from = super._update(to, tokenId, auth);
+
         if (from != to) {
             if (from == address(0)) {
                 _updateSignature(tokenId, true, to, "");
